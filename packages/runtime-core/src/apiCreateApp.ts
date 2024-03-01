@@ -203,6 +203,7 @@ export function createAppAPI<HostElement>(
   hydrate?: RootHydrateFunction,
 ): CreateAppFunction<HostElement> {
   return function createApp(rootComponent, rootProps = null) {
+    // 判断是否函数组件
     if (!isFunction(rootComponent)) {
       rootComponent = extend({}, rootComponent)
     }
@@ -211,12 +212,13 @@ export function createAppAPI<HostElement>(
       __DEV__ && warn(`root props passed to app.mount() must be an object.`)
       rootProps = null
     }
-
+    // 初始化 app 上下文
     const context = createAppContext()
+    // 已安装插件
     const installedPlugins = new WeakSet()
-
+    // 是否渲染
     let isMounted = false
-
+    // 赋值 app
     const app: App = (context.app = {
       _uid: uid++,
       _component: rootComponent as ConcreteComponent,
@@ -238,14 +240,17 @@ export function createAppAPI<HostElement>(
           )
         }
       },
-
+      // 注册插件
       use(plugin: Plugin, ...options: any[]) {
         if (installedPlugins.has(plugin)) {
+          // 插件已注册 dev 环境给出提示
           __DEV__ && warn(`Plugin has already been applied to target app.`)
         } else if (plugin && isFunction(plugin.install)) {
+          // 插件是 对象，并且对象具有 install 方法，直接执行 install,并且将插件添加到已注册插件中
           installedPlugins.add(plugin)
           plugin.install(app, ...options)
         } else if (isFunction(plugin)) {
+          // 插件是函数 执行插件本身
           installedPlugins.add(plugin)
           plugin(app, ...options)
         } else if (__DEV__) {
@@ -254,10 +259,12 @@ export function createAppAPI<HostElement>(
               `function.`,
           )
         }
+        // 返回 app本身 为了 链式调用
         return app
       },
 
       mixin(mixin: ComponentOptions) {
+        // mixin 方法 兼容 vue2 Options API 创建的组件
         if (__FEATURE_OPTIONS_API__) {
           if (!context.mixins.includes(mixin)) {
             context.mixins.push(mixin)
@@ -274,6 +281,7 @@ export function createAppAPI<HostElement>(
       },
 
       component(name: string, component?: Component): any {
+        // 注册全局组件
         if (__DEV__) {
           validateComponentName(name, context.config)
         }
@@ -288,7 +296,9 @@ export function createAppAPI<HostElement>(
       },
 
       directive(name: string, directive?: Directive) {
+        // 注册全局指令
         if (__DEV__) {
+          // 验证注册的指令是否是 内置指令 v-for v-if 这些
           validateDirectiveName(name)
         }
 
@@ -296,6 +306,7 @@ export function createAppAPI<HostElement>(
           return context.directives[name] as any
         }
         if (__DEV__ && context.directives[name]) {
+          // 如果 指令名称已经存在 给出提示
           warn(`Directive "${name}" has already been registered in target app.`)
         }
         context.directives[name] = directive
@@ -310,15 +321,18 @@ export function createAppAPI<HostElement>(
         if (!isMounted) {
           // #5571
           if (__DEV__ && (rootContainer as any).__vue_app__) {
+            // 已经挂载了一个vue实例，如果想要挂载另一个 实例，你必须想卸载之前挂载的实例
             warn(
               `There is already an app instance mounted on the host container.\n` +
                 ` If you want to mount another app on the same host container,` +
                 ` you need to unmount the previous app by calling \`app.unmount()\` first.`,
             )
           }
+          // 创建实例节点
           const vnode = createVNode(rootComponent, rootProps)
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
+          // 存储实例
           vnode.appContext = context
 
           if (namespace === true) {
@@ -341,10 +355,13 @@ export function createAppAPI<HostElement>(
           }
 
           if (isHydrate && hydrate) {
+            // 如果是 SSR 服务器渲染 调用
             hydrate(vnode as VNode<Node, Element>, rootContainer as any)
           } else {
+            // 普通渲染调用
             render(vnode, rootContainer, namespace)
           }
+          // 修改 实例的挂载状态
           isMounted = true
           app._container = rootContainer
           // for devtools and telemetry
@@ -357,6 +374,7 @@ export function createAppAPI<HostElement>(
 
           return getExposeProxy(vnode.component!) || vnode.component!.proxy
         } else if (__DEV__) {
+          // 组件已经挂载 给出提示
           warn(
             `App has already been mounted.\n` +
               `If you want to remount the same app, move your app creation logic ` +
@@ -367,6 +385,7 @@ export function createAppAPI<HostElement>(
       },
 
       unmount() {
+        // 组件卸载
         if (isMounted) {
           render(null, app._container)
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
@@ -380,6 +399,7 @@ export function createAppAPI<HostElement>(
       },
 
       provide(key, value) {
+        // 定义全局 使用值
         if (__DEV__ && (key as string | symbol) in context.provides) {
           warn(
             `App already provides property with key "${String(key)}". ` +
@@ -393,6 +413,7 @@ export function createAppAPI<HostElement>(
       },
 
       runWithContext(fn) {
+        // 传入一个fn 使得 可以不用在 setup 中 就可以直接使用 inject
         const lastApp = currentApp
         currentApp = app
         try {
@@ -404,6 +425,7 @@ export function createAppAPI<HostElement>(
     })
 
     if (__COMPAT__) {
+      // 兼容 vue2
       installAppCompatProperties(app, context, render)
     }
 
