@@ -329,7 +329,10 @@ export function installAppCompatProperties(
   context: AppContext,
   render: RootRenderFunction<any>,
 ) {
+  // 兼容处理 vue2
+  // 处理vue2 的 filter
   installFilterMethod(app, context)
+  // 处理 vue2 的其他属性
   installLegacyOptionMergeStrats(app.config)
 
   if (!singletonApp) {
@@ -337,8 +340,9 @@ export function installAppCompatProperties(
     // unnecessary
     return
   }
-
+  // 处理 vue2 中 只实例组件，但是不进行挂载的 行为
   installCompatMount(app, context, render)
+  // 处理 vue2 插件
   installLegacyAPIs(app)
   applySingletonAppMutations(app)
   if (__DEV__) installLegacyConfigWarnings(app.config)
@@ -451,7 +455,7 @@ function installCompatMount(
   render: RootRenderFunction,
 ) {
   let isMounted = false
-
+  // vue2 支持创建组件实例，但是不进行挂载的行为，在 vue3 中这种行为不被支持，使用这种方式进行模拟
   /**
    * Vue 2 supports the behavior of creating a component instance but not
    * mounting it, which is no longer possible in Vue 3 - this internal
