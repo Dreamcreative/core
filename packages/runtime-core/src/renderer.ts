@@ -331,9 +331,10 @@ function baseCreateRenderer(
 ): any {
   // compile-time feature flags check
   if (__ESM_BUNDLER__ && !__TEST__) {
+    // 处理 flags 标记
     initFeatureFlags()
   }
-
+  // 获取全局this
   const target = getGlobalThis()
   target.__VUE__ = true
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
@@ -371,7 +372,7 @@ function baseCreateRenderer(
     if (n1 === n2) {
       return
     }
-
+    // 新旧节点 tag 和 key 不同 则卸载旧节点
     // patching & not same type, unmount old tree
     if (n1 && !isSameVNodeType(n1, n2)) {
       anchor = getNextHostNode(n1)
@@ -385,6 +386,7 @@ function baseCreateRenderer(
     }
 
     const { type, ref, shapeFlag } = n2
+    // 针对不同的节点类型 进行不同的 节点操作
     switch (type) {
       case Text:
         processText(n1, n2, container, anchor)
@@ -475,6 +477,7 @@ function baseCreateRenderer(
   }
 
   const processText: ProcessTextOrCommentFn = (n1, n2, container, anchor) => {
+    // 处理文本
     if (n1 == null) {
       hostInsert(
         (n2.el = hostCreateText(n2.children as string)),
@@ -495,6 +498,7 @@ function baseCreateRenderer(
     container,
     anchor,
   ) => {
+    // 处理注释节点
     if (n1 == null) {
       hostInsert(
         (n2.el = hostCreateComment((n2.children as string) || '')),
@@ -513,6 +517,7 @@ function baseCreateRenderer(
     anchor: RendererNode | null,
     namespace: ElementNamespace,
   ) => {
+    // 挂载静态节点
     // static nodes are only present when used with compiler-dom/runtime-dom
     // which guarantees presence of hostInsertStaticContent.
     ;[n2.el, n2.anchor] = hostInsertStaticContent!(
@@ -534,6 +539,7 @@ function baseCreateRenderer(
     container: RendererElement,
     namespace: ElementNamespace,
   ) => {
+    // 静态节点 DOM Diff
     // static nodes are only patched during dev for HMR
     if (n2.children !== n1.children) {
       const anchor = hostNextSibling(n1.anchor!)
@@ -557,6 +563,7 @@ function baseCreateRenderer(
     container: RendererElement,
     nextSibling: RendererNode | null,
   ) => {
+    // 移动静态节点
     let next
     while (el && el !== anchor) {
       next = hostNextSibling(el)
@@ -567,6 +574,7 @@ function baseCreateRenderer(
   }
 
   const removeStaticNode = ({ el, anchor }: VNode) => {
+    // 删除静态节点
     let next
     while (el && el !== anchor) {
       next = hostNextSibling(el)
@@ -587,6 +595,7 @@ function baseCreateRenderer(
     slotScopeIds: string[] | null,
     optimized: boolean,
   ) => {
+    // 处理组件
     if (n2.type === 'svg') {
       namespace = 'svg'
     } else if (n2.type === 'math') {
@@ -594,6 +603,7 @@ function baseCreateRenderer(
     }
 
     if (n1 == null) {
+      // 如果 n1 为空 表示组件挂载，直接挂载 n2
       mountElement(
         n2,
         container,
@@ -605,6 +615,7 @@ function baseCreateRenderer(
         optimized,
       )
     } else {
+      // 如果 n1 n2 都存在 进行 DOM Diff
       patchElement(
         n1,
         n2,
@@ -641,8 +652,10 @@ function baseCreateRenderer(
     // mount children first, since some props may rely on child content
     // being already rendered, e.g. `<select value>`
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      // 处理子节点为 文本
       hostSetElementText(el, vnode.children as string)
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      // 处理 子节点为 数组
       mountChildren(
         vnode.children as VNodeArrayChildren,
         el,
@@ -656,13 +669,16 @@ function baseCreateRenderer(
     }
 
     if (dirs) {
+      // 处理组件上的指令 执行指令的 created 生命周期
       invokeDirectiveHook(vnode, null, parentComponent, 'created')
     }
     // scopeId
     setScopeId(el, vnode, vnode.scopeId, slotScopeIds, parentComponent)
     // props
     if (props) {
+      // 处理节点 props 属性
       for (const key in props) {
+        // 对属性值不为 value 和 vue 保留属性时进行处理
         if (key !== 'value' && !isReservedProp(key)) {
           hostPatchProp(
             el,
@@ -705,10 +721,12 @@ function baseCreateRenderer(
       })
     }
     if (dirs) {
+      // 处理组件上的指令 执行 beforeMount 生命周期
       invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
     }
     // #1583 For inside suspense + suspense not resolved case, enter hook should call when suspense resolved
     // #1689 For inside suspense + suspense resolved case, just call it
+    // 处理 Transition 组件
     const needCallTransitionHooks = needTransition(parentSuspense, transition)
     if (needCallTransitionHooks) {
       transition!.beforeEnter(el)
@@ -776,6 +794,7 @@ function baseCreateRenderer(
     optimized,
     start = 0,
   ) => {
+    // 挂载子节点
     for (let i = start; i < children.length; i++) {
       const child = (children[i] = optimized
         ? cloneIfMounted(children[i] as VNode)
@@ -811,13 +830,15 @@ function baseCreateRenderer(
     const oldProps = n1.props || EMPTY_OBJ
     const newProps = n2.props || EMPTY_OBJ
     let vnodeHook: VNodeHook | undefined | null
-
+    // 在 beforeUpdate 钩子 禁用递归
     // disable recurse in beforeUpdate hooks
     parentComponent && toggleRecurse(parentComponent, false)
     if ((vnodeHook = newProps.onVnodeBeforeUpdate)) {
+      // 执行组件的 beforeUpdate
       invokeVNodeHook(vnodeHook, parentComponent, n2, n1)
     }
     if (dirs) {
+      // 执行指令的 beforeUpdate
       invokeDirectiveHook(n2, n1, parentComponent, 'beforeUpdate')
     }
     parentComponent && toggleRecurse(parentComponent, true)
@@ -844,6 +865,8 @@ function baseCreateRenderer(
         traverseStaticChildren(n1, n2)
       }
     } else if (!optimized) {
+      // 组件更新时，进行组件的 DOM DIFF
+
       // full diff
       patchChildren(
         n1,
@@ -1641,9 +1664,14 @@ function baseCreateRenderer(
     const { patchFlag, shapeFlag } = n2
     // fast path
     if (patchFlag > 0) {
+      // 标记了 key 的节点
       if (patchFlag & PatchFlags.KEYED_FRAGMENT) {
         // this could be either fully-keyed or mixed (some keyed some not)
         // presence of patchFlag means children are guaranteed to be arrays
+        /**
+         * 1. 头部 尾部节点比较
+         * 2. 最长递增序列：获取一个数组中最长的不需要移动的相邻节点，然后移动其他需要移动的节点。数组越长，性能越好
+         */
         patchKeyedChildren(
           c1 as VNode[],
           c2 as VNodeArrayChildren,
@@ -1657,6 +1685,13 @@ function baseCreateRenderer(
         )
         return
       } else if (patchFlag & PatchFlags.UNKEYED_FRAGMENT) {
+        // 没有标记 key 的节点
+        /**
+         * 遍历短节点，相同节点不更新，不同就更新，
+         * 遍历完成，
+         * 1. 旧的节点数大于新节点数，直接卸载
+         * 2. 旧的节点数小于新节点数，创建多余节点
+         */
         // unkeyed
         patchUnkeyedChildren(
           c1 as VNode[],
@@ -1740,8 +1775,10 @@ function baseCreateRenderer(
     c2 = c2 || EMPTY_ARR
     const oldLength = c1.length
     const newLength = c2.length
+    // 获取新旧节点中 短的节点
     const commonLength = Math.min(oldLength, newLength)
     let i
+    // 遍历短节点
     for (i = 0; i < commonLength; i++) {
       const nextChild = (c2[i] = optimized
         ? cloneIfMounted(c2[i] as VNode)
@@ -1759,6 +1796,7 @@ function baseCreateRenderer(
       )
     }
     if (oldLength > newLength) {
+      // 旧节点大于新节点 进行卸载
       // remove old
       unmountChildren(
         c1,
@@ -1769,6 +1807,7 @@ function baseCreateRenderer(
         commonLength,
       )
     } else {
+      // 新节点 大于或等于旧节点 进行挂载
       // mount new
       mountChildren(
         c2,
@@ -1800,7 +1839,7 @@ function baseCreateRenderer(
     const l2 = c2.length
     let e1 = c1.length - 1 // prev ending index
     let e2 = l2 - 1 // next ending index
-
+    // 先从第一个节点开始遍历，发现不同，立即跳出循环
     // 1. sync from start
     // (a b) c
     // (a b) d e
@@ -1826,7 +1865,7 @@ function baseCreateRenderer(
       }
       i++
     }
-
+    // 再从最后一个节点开始遍历 发现不同 立即跳出循环
     // 2. sync from end
     // a (b c)
     // d e (b c)
@@ -1854,6 +1893,7 @@ function baseCreateRenderer(
       e2--
     }
 
+    // 如果新的节点长度大于旧节点，对于剩下的节点全部以新的 vnode 处理
     // 3. common sequence + mount
     // (a b)
     // (a b) c
@@ -1884,6 +1924,7 @@ function baseCreateRenderer(
       }
     }
 
+    // 只有旧的节点剩余，执行旧节点的卸载
     // 4. common sequence + unmount
     // (a b) c
     // (a b)
@@ -1898,6 +1939,7 @@ function baseCreateRenderer(
       }
     }
 
+    // 新旧节点都有剩余时
     // 5. unknown sequence
     // [i ... e1 + 1]: a b [c d e] f g
     // [i ... e2 + 1]: a b [e d c h] f g
@@ -1905,7 +1947,7 @@ function baseCreateRenderer(
     else {
       const s1 = i // prev starting index
       const s2 = i // next starting index
-
+      // 生成一个 Map 把新的元素的 key(如果存在) 和它对应的下标保存起来
       // 5.1 build key:index map for newChildren
       const keyToNewIndexMap: Map<string | number | symbol, number> = new Map()
       for (i = s2; i <= e2; i++) {
@@ -1985,7 +2027,7 @@ function baseCreateRenderer(
           patched++
         }
       }
-
+      // 最长递增子序列
       // 5.3 move and mount
       // generate longest stable subsequence only when nodes have moved
       const increasingNewIndexSequence = moved
@@ -2012,6 +2054,8 @@ function baseCreateRenderer(
             optimized,
           )
         } else if (moved) {
+          // 最大子序列下标中，对应的元素不需要移动，其他的元素进行移动，
+          // 如果 i 对应的不是最长子序列中的下标，进行 元素移动
           // move if:
           // There is no stable subsequence (e.g. a reverse)
           // OR current node is not among the stable sequence
