@@ -65,6 +65,7 @@ export const hydrate = ((...args) => {
 }) as RootHydrateFunction
 
 export const createApp = ((...args) => {
+  // 返回 vue 实例
   const app = ensureRenderer().createApp(...args)
 
   if (__DEV__) {
@@ -116,14 +117,18 @@ export const createSSRApp = ((...args) => {
   const app = ensureHydrationRenderer().createApp(...args)
 
   if (__DEV__) {
+    // 检查是否原生标签
     injectNativeTagCheck(app)
+    // 是否自定义标签
     injectCompilerOptionsCheck(app)
   }
 
   const { mount } = app
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
+    // 生成容器
     const container = normalizeContainer(containerOrSelector)
     if (container) {
+      // 进行挂载
       return mount(container, true, resolveRootNamespace(container))
     }
   }
